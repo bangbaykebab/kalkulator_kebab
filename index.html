@@ -47,11 +47,17 @@
       color: #333;
     }
 
+    .btn-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
     .btn-group button {
       font-size: 20px;
       width: 40px;
       height: 40px;
-      margin: 0 5px;
       background-color: #4a90e2;
       color: white;
       border: none;
@@ -68,7 +74,7 @@
       font-size: 28px;
       font-weight: bold;
       text-align: center;
-      margin-top: 20px;
+      margin-top: 10px;
       color: #2c3e50;
     }
 
@@ -112,14 +118,17 @@
     <thead>
       <tr>
         <th>ITEM</th>
-        <th>Keterangan</th>
+        <th>HARGA</th>
+        <th>KUANTITAS</th>
+        <th>BANYAKNYA ITEM</th>
+        <th>SUBTOTAL</th>
       </tr>
     </thead>
-    <tbody id="bodyTabel">
-      <!-- Data ditambahkan oleh JavaScript -->
-    </tbody>
+    <tbody id="bodyTabel"></tbody>
   </table>
 
+  <!-- Baris Total Jumlah -->
+  <div class="total" id="totalJumlah">Total Jumlah Item: 0</div>
   <div class="total" id="totalHarga">TOTAL: Rp 0</div>
   <button class="reset-btn" onclick="reset()">Reset Semua</button>
 
@@ -139,52 +148,83 @@
 
     const tbody = document.getElementById("bodyTabel");
 
+    // Buat baris tabel
     items.forEach(item => {
       item.jumlah = 0;
 
       const tr = document.createElement("tr");
-
       tr.innerHTML = `
         <td class="item-kode">${item.kode}</td>
+        <td>Rp ${item.harga.toLocaleString()}</td>
         <td>
           <div class="btn-group">
             <button onclick="ubahJumlah('${item.kode}', -1)">−</button>
-            <input type="text" id="jumlah-${item.kode}" value="0" readonly style="display:none;">
+            <span id="jumlah-${item.kode}">0</span>
             <button onclick="ubahJumlah('${item.kode}', 1)">+</button>
           </div>
         </td>
+        <td id="banyak-${item.kode}">0</td>
+        <td id="subtotal-${item.kode}">Rp 0</td>
       `;
-
       tbody.appendChild(tr);
     });
 
     function ubahJumlah(kode, delta) {
       const item = items.find(i => i.kode === kode);
-      if (item.jumlah + delta >= 0) {
+      if (item && item.jumlah + delta >= 0) {
         item.jumlah += delta;
-        document.getElementById(`jumlah-${kode}`).value = item.jumlah;
+
+        document.getElementById(`jumlah-${kode}`).textContent = item.jumlah;
+        document.getElementById(`banyak-${kode}`).textContent = item.jumlah;
+        document.getElementById(`subtotal-${kode}`).textContent = `Rp ${(item.jumlah * item.harga).toLocaleString()}`;
+        
         hitungTotal();
+        localStorage.setItem('items', JSON.stringify(items));
       }
     }
 
     function hitungTotal() {
-      let total = 0;
+      let totalHarga = 0;
+      let totalJumlah = 0;
+
       items.forEach(item => {
-        total += item.jumlah * item.harga;
+        totalHarga += item.jumlah * item.harga;
+        totalJumlah += item.jumlah;
       });
-      document.getElementById("totalHarga").textContent = `TOTAL: Rp ${total.toLocaleString()}`;
+
+      document.getElementById("totalHarga").textContent = `TOTAL: Rp ${totalHarga.toLocaleString()}`;
+      document.getElementById("totalJumlah").textContent = `Total Jumlah Item: ${totalJumlah.toLocaleString()}`;
     }
 
     function reset() {
       items.forEach(item => {
         item.jumlah = 0;
-        document.getElementById(`jumlah-${item.kode}`).value = 0;
+      });
+      localStorage.setItem('items', JSON.stringify(items));
+      refreshUI();
+    }
+
+    function refreshUI() {
+      items.forEach(item => {
+        document.getElementById(`jumlah-${item.kode}`).textContent = item.jumlah;
+        document.getElementById(`banyak-${item.kode}`).textContent = item.jumlah;
+        document.getElementById(`subtotal-${item.kode}`).textContent = `Rp ${(item.jumlah * item.harga).toLocaleString()}`;
       });
       hitungTotal();
     }
 
-    // Hitung awal
-    hitungTotal();
+    // Muat data dari localStorage jika tersedia
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('items');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        items.forEach(item => {
+          const stored = parsed.find(i => i.kode === item.kode);
+          if (stored) item.jumlah = stored.jumlah;
+        });
+      }
+      refreshUI();
+    });
   </script>
 
 </body>
